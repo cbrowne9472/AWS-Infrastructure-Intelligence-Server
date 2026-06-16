@@ -6,6 +6,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
 from server.config import settings
+from server.rag.knowledge_base import add_document, search_runbooks
 from server.tools.cloudwatch_tools import get_cloudwatch_alarms
 from server.tools.cost_tools import get_cost_by_service, get_cost_trend
 from server.tools.ec2_tools import get_ec2_instances
@@ -99,6 +100,37 @@ TOOLS = [
         description="Get VPC topology: VPCs, subnets with AZ and CIDR, internet gateways.",
         inputSchema={"type": "object", "properties": {}},
     ),
+    Tool(
+        name="search_runbooks",
+        description="Semantically search the infrastructure knowledge base including runbooks, past incidents, and architecture docs. Use this when asked about how to fix issues, past incidents, or how services are configured.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "doc_type": {
+                    "type": "string",
+                    "enum": ["runbook", "incident", "architecture"],
+                },
+            },
+            "required": ["query"],
+        },
+    ),
+    Tool(
+        name="ingest_document",
+        description="Add a new document to the knowledge base. Use this to add runbooks, incident reports, or architecture documentation.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "content": {"type": "string"},
+                "title": {"type": "string"},
+                "doc_type": {
+                    "type": "string",
+                    "enum": ["runbook", "incident", "architecture"],
+                },
+            },
+            "required": ["content", "title", "doc_type"],
+        },
+    ),
 ]
 
 TOOL_MAP = {
@@ -112,6 +144,8 @@ TOOL_MAP = {
     "get_cost_by_service": lambda args: get_cost_by_service(args.get("month", "current")),
     "get_cost_trend": lambda args: get_cost_trend(),
     "get_vpc_info": lambda args: get_vpc_info(),
+    "search_runbooks": lambda args: search_runbooks(args["query"], args.get("doc_type")),
+    "ingest_document": lambda args: add_document(args["content"], args["title"], args["doc_type"]),
 }
 
 
